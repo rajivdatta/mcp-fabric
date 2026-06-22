@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+
+# Secrets / local config - NEVER commit
+.env
+config.json

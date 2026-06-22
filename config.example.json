@@ -1,0 +1,17 @@
+{
+  "_comment": "auth: broker | azure-cli | interactive | service-principal | default. 'writable' gates all create/update/delete/run/refresh tools. For service-principal also set tenant_id, client_id, and client_secret_env (name of an env var in .env).",
+  "auth": "broker",
+  "tenant_id": null,
+  "scope": "https://api.fabric.microsoft.com/.default",
+  "base_url": "https://api.fabric.microsoft.com/v1",
+  "writable": true,
+
+  "_service_principal_example": {
+    "auth": "service-principal",
+    "tenant_id": "your-tenant-guid",
+    "client_id": "app-registration-client-id",
+    "client_secret_env": "FABRIC_SP_SECRET",
+    "scope": "https://api.fabric.microsoft.com/.default",
+    "writable": true
+  }
+}

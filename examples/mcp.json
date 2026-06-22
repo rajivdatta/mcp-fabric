@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "fabric": {
+      "command": "C:\\path\\to\\mcp-fabric\\.venv\\Scripts\\python.exe",
+      "args": ["C:\\path\\to\\mcp-fabric\\server.py"],
+      "env": {}
+    }
+  }
+}
