@@ -83,3 +83,36 @@ See `examples/mcp.json`:
   }
 }
 ```
+
+## Use with Claude Desktop
+
+[Claude Desktop](https://claude.ai/download) reads its MCP servers from
+`claude_desktop_config.json`. Open it from **Settings → Developer → Edit Config**
+(this creates the file if it doesn't exist), or edit it directly:
+
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+Add this server under `mcpServers`, using **absolute paths** to the venv's
+Python and `server.py`:
+
+```json
+{
+  "mcpServers": {
+    "fabric": {
+      "command": "C:\\path\\to\\mcp-fabric\\.venv\\Scripts\\python.exe",
+      "args": ["C:\\path\\to\\mcp-fabric\\server.py"],
+      "env": {}
+    }
+  }
+}
+```
+
+On macOS the paths are POSIX, e.g. `"command": "/Users/you/mcp-fabric/.venv/bin/python"`.
+Save the file and **fully quit and reopen Claude Desktop** (use *Quit* from the
+tray/menu-bar icon — closing the window isn't enough). The server's tools then
+appear in the tools (🔌) menu of a new chat.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
