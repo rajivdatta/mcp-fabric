@@ -246,6 +246,12 @@ def get_job(ws_id: str, item_id: str, job_instance_id: str) -> dict:
     return request("GET", f"/workspaces/{ws_id}/items/{item_id}/jobs/instances/{job_instance_id}")
 
 
+def list_item_schedules(ws_id: str, item_id: str, job_type: str) -> list:
+    """List the schedules configured on an item for a given job type
+    (e.g. 'Pipeline' for Data pipelines, 'RunNotebook' for notebooks)."""
+    return _get_all(f"/workspaces/{ws_id}/items/{item_id}/jobs/{job_type}/schedules")
+
+
 def cancel_job(ws_id: str, item_id: str, job_instance_id: str) -> dict:
     resp = _raw("POST", f"/workspaces/{ws_id}/items/{item_id}/jobs/instances/{job_instance_id}/cancel")
     return {"status_code": resp.status_code, "location": resp.headers.get("Location", "")}

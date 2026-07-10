@@ -324,6 +324,30 @@ def get_job(workspace: str, item: str, job_instance_id: str,
 
 
 @mcp.tool()
+def get_item_schedules(workspace: str, item: str, job_type: str = "Pipeline",
+                       item_type: str | None = None) -> str:
+    """List the schedules configured on an item. `job_type` is the Fabric job
+    type to inspect: 'Pipeline' for Data pipelines (default), 'RunNotebook' for
+    notebooks, 'Refresh' for dataflows. Returns each schedule's id, enabled flag,
+    and recurrence configuration (Cron/Daily/Weekly, start/end, timezone). An
+    empty list means the item has no schedule for that job type (runs on demand
+    or via a parent pipeline only)."""
+    try:
+        ws = fabric.resolve_workspace(workspace)
+        item_id = fabric.resolve_item(ws, item, item_type)
+        schedules = fabric.list_item_schedules(ws, item_id, job_type)
+        out = [{"id": s.get("id"), "enabled": s.get("enabled"),
+                "createdDateTime": s.get("createdDateTime"),
+                "configuration": s.get("configuration"),
+                "owner": (s.get("owner") or {}).get("id")}
+               for s in schedules]
+        return _dump({"workspaceId": ws, "itemId": item_id, "jobType": job_type,
+                      "scheduleCount": len(out), "schedules": out})
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
 def cancel_job(workspace: str, item: str, job_instance_id: str,
                item_type: str | None = None) -> str:
     """Cancel a running job instance. Requires a writable server."""
