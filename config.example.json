@@ -6,6 +6,10 @@
   "base_url": "https://api.fabric.microsoft.com/v1",
   "writable": true,
 
+  "_broker_comment": "broker auth only. use_default_broker_account=false forces the account picker; login_hint pre-selects a UPN when several work accounts are signed in.",
+  "use_default_broker_account": true,
+  "login_hint": null,
+
   "_service_principal_example": {
     "auth": "service-principal",
     "tenant_id": "your-tenant-guid",

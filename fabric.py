@@ -48,11 +48,15 @@ def _credential():
             handle = ctypes.windll.kernel32.GetConsoleWindow()
         except Exception:
             handle = 0
-        _cred = InteractiveBrowserBrokerCredential(
+        broker_kwargs = dict(
             tenant_id=tenant,
             parent_window_handle=handle or 0,
-            use_default_broker_account=True,
+            use_default_broker_account=_CFG.get("use_default_broker_account", True),
         )
+        login_hint = _CFG.get("login_hint")
+        if login_hint:
+            broker_kwargs["login_hint"] = login_hint
+        _cred = InteractiveBrowserBrokerCredential(**broker_kwargs)
     elif auth == "azure-cli":
         from azure.identity import AzureCliCredential
         _cred = AzureCliCredential(tenant_id=tenant) if tenant else AzureCliCredential()
@@ -250,6 +254,19 @@ def list_item_schedules(ws_id: str, item_id: str, job_type: str) -> list:
     """List the schedules configured on an item for a given job type
     (e.g. 'Pipeline' for Data pipelines, 'RunNotebook' for notebooks)."""
     return _get_all(f"/workspaces/{ws_id}/items/{item_id}/jobs/{job_type}/schedules")
+
+
+def update_item_schedule(ws_id: str, item_id: str, job_type: str, schedule_id: str,
+                         configuration: dict, enabled: bool) -> dict:
+    """Update one existing schedule (PATCH). Fabric's Update Item Schedule API
+    replaces the whole schedule, so the current `configuration` (recurrence)
+    must be echoed back alongside the desired `enabled` flag."""
+    body = {"enabled": enabled, "configuration": configuration}
+    return request(
+        "PATCH",
+        f"/workspaces/{ws_id}/items/{item_id}/jobs/{job_type}/schedules/{schedule_id}",
+        json_body=body,
+    )
 
 
 def cancel_job(ws_id: str, item_id: str, job_instance_id: str) -> dict:

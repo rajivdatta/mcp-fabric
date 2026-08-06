@@ -348,6 +348,67 @@ def get_item_schedules(workspace: str, item: str, job_type: str = "Pipeline",
 
 
 @mcp.tool()
+def set_schedule_enabled(workspace: str, item: str, schedule_id: str,
+                         enabled: bool, job_type: str = "Pipeline",
+                         item_type: str | None = None) -> str:
+    """Enable or disable a single existing schedule on an item. `job_type` is
+    'Pipeline' (data pipelines), 'RunNotebook' (notebooks), or 'Refresh'
+    (dataflows). Only the enabled flag changes; the schedule's existing
+    recurrence is preserved. Get schedule ids from get_item_schedules.
+    Requires a writable server."""
+    deny = _deny()
+    if deny:
+        return deny
+    try:
+        ws = fabric.resolve_workspace(workspace)
+        item_id = fabric.resolve_item(ws, item, item_type)
+        schedules = fabric.list_item_schedules(ws, item_id, job_type)
+        match = next((s for s in schedules if s.get("id") == schedule_id), None)
+        if match is None:
+            return _dump({"error": f"schedule '{schedule_id}' not found on item",
+                          "availableIds": [s.get("id") for s in schedules]})
+        fabric.update_item_schedule(ws, item_id, job_type, schedule_id,
+                                    match.get("configuration"), enabled)
+        return _dump({"workspaceId": ws, "itemId": item_id, "jobType": job_type,
+                      "scheduleId": schedule_id, "enabled": enabled, "updated": True})
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def disable_item_schedules(workspace: str, item: str, job_type: str = "Pipeline",
+                           item_type: str | None = None, enable: bool = False) -> str:
+    """Disable ALL schedules on an item for the given job_type (pass enable=True
+    to enable them instead). Each schedule's recurrence is preserved; only the
+    enabled flag flips. `job_type` is 'Pipeline', 'RunNotebook', or 'Refresh'.
+    Schedules already in the target state are skipped. Returns the schedule ids
+    acted on. Requires a writable server."""
+    deny = _deny()
+    if deny:
+        return deny
+    try:
+        ws = fabric.resolve_workspace(workspace)
+        item_id = fabric.resolve_item(ws, item, item_type)
+        schedules = fabric.list_item_schedules(ws, item_id, job_type)
+        results = []
+        for s in schedules:
+            sid = s.get("id")
+            if bool(s.get("enabled")) == enable:
+                results.append({"scheduleId": sid, "changed": False,
+                                "enabled": enable, "note": "already in target state"})
+                continue
+            fabric.update_item_schedule(ws, item_id, job_type, sid,
+                                        s.get("configuration"), enable)
+            results.append({"scheduleId": sid, "changed": True, "enabled": enable})
+        return _dump({"workspaceId": ws, "itemId": item_id, "jobType": job_type,
+                      "scheduleCount": len(schedules),
+                      "changed": sum(1 for r in results if r["changed"]),
+                      "results": results})
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
 def cancel_job(workspace: str, item: str, job_instance_id: str,
                item_type: str | None = None) -> str:
     """Cancel a running job instance. Requires a writable server."""

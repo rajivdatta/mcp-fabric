@@ -13,6 +13,7 @@ Read tools always work; create/update/delete/run tools require
 **Discovery / read**
 - `list_workspaces`
 - `list_items` — filter by `item_type` (Notebook, Dataflow, Lakehouse, …)
+- `list_folders` — workspace folders; pass a `displayName`/id as `folder` when creating items
 - `get_item` — item metadata
 - `get_item_definition` — decoded definition parts of any item (generic/advanced)
 
@@ -28,9 +29,24 @@ Read tools always work; create/update/delete/run tools require
 - `update_dataflow` — replace the M document
 - `refresh_dataflow` / `publish_dataflow` — on-demand jobs
 
+**Schedules**
+- `get_item_schedules` — schedules on an item: id, `enabled`, and recurrence
+  (Cron/Daily/Weekly, start/end, timezone). An empty list means the item only
+  runs on demand or via a parent pipeline.
+- `set_schedule_enabled` — flip one schedule's `enabled` flag by id
+- `disable_item_schedules` — flip **every** schedule on an item (`enable=True`
+  to re-enable); schedules already in the target state are skipped
+
+> `job_type` selects which schedules you're looking at: `Pipeline` for data
+> pipelines (default), `RunNotebook` for notebooks, `Refresh` for dataflows.
+> Fabric's Update Schedule API replaces the whole schedule, so both write tools
+> read the existing recurrence and echo it back — only the `enabled` flag
+> changes.
+
 **Jobs / lifecycle**
 - `get_job` — status of a notebook run / dataflow refresh
 - `cancel_job`
+- `move_item` — move an item into a folder (or to the workspace root); children follow
 - `delete_item`
 
 > Definition create/update are long-running operations; the server polls them to
@@ -58,6 +74,14 @@ Set `"auth"` in `config.json`:
 The identity needs an appropriate **workspace role** (Admin/Member/Contributor)
 to create and run items. Default token scope is
 `https://api.fabric.microsoft.com/.default`.
+
+Two extra `config.json` keys tune `broker` sign-in when the machine has more
+than one work account signed in:
+
+| key | default | effect |
+|-----|---------|--------|
+| `use_default_broker_account` | `true` | Silently reuse the Windows default account. Set `false` to always get the account picker. |
+| `login_hint` | *(unset)* | Pre-select this UPN/email, so the broker picks the right identity instead of whichever is default. |
 
 ## Setup
 
