@@ -1,5 +1,6 @@
 fastmcp>=2.0
 azure-identity>=1.17
 azure-identity-broker>=1.1
+msal-extensions>=1.2   # required for TokenCachePersistenceOptions
 requests>=2.31
 python-dotenv>=1.0

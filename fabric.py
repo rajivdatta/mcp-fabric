@@ -30,6 +30,7 @@ _TIMEOUT = 60          # per-request seconds
 _LRO_MAX_WAIT = 600    # cap on definition LRO polling, seconds
 
 _cred = None
+_AUTH_RECORD = _HERE / ".auth_record.json"
 
 
 # --------------------------------------------------------------------------- #
@@ -43,6 +44,7 @@ def _credential():
     tenant = _CFG.get("tenant_id")
     if auth == "broker":
         import ctypes
+        from azure.identity import AuthenticationRecord, TokenCachePersistenceOptions
         from azure.identity.broker import InteractiveBrowserBrokerCredential
         try:
             handle = ctypes.windll.kernel32.GetConsoleWindow()
@@ -52,11 +54,32 @@ def _credential():
             tenant_id=tenant,
             parent_window_handle=handle or 0,
             use_default_broker_account=_CFG.get("use_default_broker_account", True),
+            # Persist the MSAL cache to disk (DPAPI-encrypted on Windows). Without
+            # this the cache is per-process, so every server restart re-prompts.
+            cache_persistence_options=TokenCachePersistenceOptions(name="mcp-fabric"),
         )
         login_hint = _CFG.get("login_hint")
         if login_hint:
             broker_kwargs["login_hint"] = login_hint
+        # The persisted cache is only usable if we can name the account it holds;
+        # the AuthenticationRecord does that, and keeps the identity pinned to
+        # login_hint instead of falling back to an account picker.
+        record = None
+        if _AUTH_RECORD.exists():
+            try:
+                record = AuthenticationRecord.deserialize(
+                    _AUTH_RECORD.read_text(encoding="utf-8"))
+                broker_kwargs["authentication_record"] = record
+            except Exception:
+                record = None
         _cred = InteractiveBrowserBrokerCredential(**broker_kwargs)
+        if record is None:
+            # First run (or a corrupt record): sign in once, then remember who.
+            try:
+                rec = _cred.authenticate(scopes=[SCOPE])
+                _AUTH_RECORD.write_text(rec.serialize(), encoding="utf-8")
+            except Exception:
+                pass  # fall through; get_token() will surface the real error
     elif auth == "azure-cli":
         from azure.identity import AzureCliCredential
         _cred = AzureCliCredential(tenant_id=tenant) if tenant else AzureCliCredential()

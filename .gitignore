@@ -8,3 +8,6 @@ __pycache__/
 # Secrets / local config - NEVER commit
 .env
 config.json
+
+# Local auth cache (identity pin, not a secret - still local-only)
+.auth_record.json
