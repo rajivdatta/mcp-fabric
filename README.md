@@ -43,6 +43,20 @@ Read tools always work; create/update/delete/run tools require
 > read the existing recurrence and echo it back — only the `enabled` flag
 > changes.
 
+**Lakehouse / Warehouse data (read-only SQL)** — `fabric_sql.py`, added 2026-10-08
+- `list_sql_tables` — tables/views on a Lakehouse SQL endpoint, Warehouse or Mirrored database
+- `describe_sql_table` — columns + types + row count of `schema.table`
+- `query_sql` — one `SELECT` / `WITH … SELECT`, `max_rows` 200 by default (cap 5000), `truncated` flag
+- `refresh_sql_endpoint` — re-sync a lakehouse endpoint's metadata (new / path-written tables, new shortcuts)
+- `list_onelake` — list a OneLake folder (`Tables`, `Tables/<schema>`, `Files/...`); sees shortcuts and new tables before the SQL endpoint does
+
+> Read-only three ways: a statement check (single statement, must start `SELECT`/`WITH`, no
+> DML/DDL/`INTO`/`EXEC`/`SET`/`DECLARE`), an `ApplicationIntent=ReadOnly` connection, and a
+> rollback after every query. These tools work even when `"writable": false`. They run as this server's
+> identity (`login_hint` in config.json) via a `https://database.windows.net` token and
+> pyodbc + ODBC Driver 18. Lakehouse object names are case-sensitive (`jde_prod.lot_sales`).
+> If a name is both a Lakehouse and something else, pass `item_type` (Lakehouse | Warehouse | MirroredDatabase).
+
 **Jobs / lifecycle**
 - `get_job` — status of a notebook run / dataflow refresh
 - `cancel_job`

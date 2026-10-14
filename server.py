@@ -15,6 +15,7 @@ import json
 from fastmcp import FastMCP
 
 import fabric
+import fabric_sql
 
 mcp = FastMCP("fabric")
 
@@ -458,6 +459,76 @@ def delete_item(workspace: str, item: str, item_type: str | None = None) -> str:
         item_id = fabric.resolve_item(ws, item, item_type)
         fabric.request("DELETE", f"/workspaces/{ws}/items/{item_id}")
         return _dump({"workspaceId": ws, "itemId": item_id, "deleted": True})
+    except Exception as exc:
+        return _err(exc)
+
+
+# --------------------------------------------------------------------------- #
+# lakehouse / warehouse SQL (read-only) - fabric_sql.py
+# --------------------------------------------------------------------------- #
+@mcp.tool()
+def list_sql_tables(workspace: str, item: str, schema: str | None = None,
+                    item_type: str | None = None) -> str:
+    """List tables and views on a Lakehouse SQL endpoint, Warehouse or Mirrored
+    database (schema, name, type). `item` is the display name or GUID; item_type
+    (Lakehouse | Warehouse | MirroredDatabase) is only needed when names collide.
+    A table written in the last few minutes may be missing until
+    refresh_sql_endpoint is run - use list_onelake to see it immediately."""
+    try:
+        r = fabric_sql.list_tables(workspace, item, schema, item_type)
+        return _dump({"endpoint": r["endpoint"], "count": r["row_count"],
+                      "tables": [dict(zip(r["columns"], x)) for x in r["rows"]]})
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def describe_sql_table(workspace: str, item: str, table: str, row_count: bool = True,
+                       item_type: str | None = None) -> str:
+    """Columns (name, type, nullability) of one table/view, plus its row count.
+    `table` is 'schema.table' (case-sensitive on lakehouse endpoints, e.g.
+    'jde_prod.lot_sales'); a bare name means dbo."""
+    try:
+        return _dump(fabric_sql.describe_table(workspace, item, table, row_count, item_type))
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def query_sql(workspace: str, item: str, sql: str, max_rows: int = 200,
+              item_type: str | None = None) -> str:
+    """Run ONE read-only T-SQL query (SELECT or WITH ... SELECT) against a Lakehouse
+    SQL endpoint, Warehouse or Mirrored database and return columns + rows.
+    max_rows defaults to 200 (cap 5000); `truncated` says if more rows exist.
+    Refused: DML/DDL, SELECT ... INTO, EXEC, multiple statements. The connection is
+    ApplicationIntent=ReadOnly and every query is rolled back. Runs as this
+    server's identity. Two- or three-part names work inside one endpoint
+    (schema.table); lakehouse object names are case-sensitive."""
+    try:
+        return _dump(fabric_sql.query(workspace, item, sql, max_rows, item_type))
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def refresh_sql_endpoint(workspace: str, lakehouse: str) -> str:
+    """Re-sync a lakehouse SQL endpoint's metadata with OneLake, so tables written
+    by path, new tables and new shortcuts become queryable. Metadata only - no
+    data changes, so it is allowed on a read-only server."""
+    try:
+        return _dump(fabric_sql.refresh_endpoint(workspace, lakehouse))
+    except Exception as exc:
+        return _err(exc)
+
+
+@mcp.tool()
+def list_onelake(workspace: str, item: str, path: str = "Tables",
+                 item_type: str | None = None) -> str:
+    """List one OneLake folder inside a Lakehouse/Warehouse/Mirror: path='Tables'
+    gives the schemas, 'Tables/<schema>' the tables (shortcuts included), 'Files/...'
+    the files. Sees changes immediately, unlike the SQL endpoint."""
+    try:
+        return _dump(fabric_sql.list_onelake(workspace, item, path, item_type))
     except Exception as exc:
         return _err(exc)
 
